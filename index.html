@@ -393,6 +393,18 @@
     color: var(--olive-dark);
   }
 
+  /* ── OFFER BANNER ── */
+  .card-offer {
+    padding: 8px 15px;
+    background: linear-gradient(90deg, var(--olive-dark) 0%, var(--copper) 50%, var(--olive-dark) 100%);
+    color: var(--cream);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    text-align: center;
+    border-top: 1px solid var(--olive);
+  }
+
   /* ── FOOTER ── */
   footer {
     text-align: center;
@@ -522,6 +534,7 @@ async function loadFromSheet() {
         phone:    get('phone'),
         tags:     get('tags').split(',').map(t => t.trim()).filter(Boolean),
         note:     get('note'),
+        offer:    get('offer'),
         hours
       };
     });
@@ -610,6 +623,7 @@ function render() {
           <div class="hours-today">${hoursText(b)}</div>
         </div>
       </div>
+      ${b.offer ? `<div class="card-offer">🎟 ${b.offer}</div>` : ''}
       <div class="card-footer">
         ${b.tags.map(t => `<span class="card-tag">${t}</span>`).join('')}
         ${b.note ? `<span class="card-note">⚠ ${b.note}</span>` : ''}
