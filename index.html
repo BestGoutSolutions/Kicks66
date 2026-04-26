@@ -417,141 +417,59 @@
 </footer>
 
 <script>
-const businesses = [
-  {
-    name: "Olympus Diner",
-    category: "food",
-    desc: "Greek-American diner. Gyros, breakfast all day, fresh local ingredients.",
-    phone: "(928) 753-4531",
-    tags: ["Breakfast", "Greek", "Lunch"],
-    hours: {
-      0: [7,0,14,0],
-      1: [7,0,14,0],
-      2: [7,0,14,0],
-      3: [7,0,20,0],
-      4: [7,0,20,0],
-      5: [7,0,20,0],
-      6: [7,0,20,0],
-    },
-    note: "Hours may vary — call ahead"
-  },
-  {
-    name: "Stuff-It Burgers",
-    category: "food",
-    desc: "Gourmet smash burgers made fresh daily. Local favorite, worth finding.",
-    phone: "(928) 377-7550",
-    tags: ["Burgers", "Lunch"],
-    hours: {
-      0: null,
-      1: [11,0,16,0],
-      2: [11,0,18,0],
-      3: [11,0,18,0],
-      4: [11,0,18,0],
-      5: [11,0,18,0],
-      6: [11,0,16,0],
-    },
-    note: "Hours change for holidays & events"
-  },
-  {
-    name: "Mr. D'z Route 66 Diner",
-    category: "food",
-    desc: "Iconic 50s diner on Route 66. Homemade root beer, classic Americana.",
-    phone: "(928) 718-0066",
-    tags: ["Diner", "Breakfast", "Burgers", "Route 66"],
-    hours: {
-      0: [7,0,21,0],
-      1: [7,0,21,0],
-      2: [7,0,21,0],
-      3: [7,0,21,0],
-      4: [7,0,21,0],
-      5: [7,0,21,0],
-      6: [7,0,21,0],
-    }
-  },
-  {
-    name: "Rutherford's 66 Diner",
-    category: "food",
-    desc: "Home-cooked meals on Route 66. Country fried steak, biscuits & gravy.",
-    phone: "(928) 377-1660",
-    tags: ["Diner", "Breakfast", "Comfort Food"],
-    hours: {
-      0: [6,0,16,0],
-      1: [6,0,21,0],
-      2: [6,0,21,0],
-      3: [6,0,21,0],
-      4: [6,0,21,0],
-      5: [6,0,22,0],
-      6: [6,0,22,0],
-    }
-  },
-  {
-    name: "Desert Diamond Distillery",
-    category: "drinks",
-    desc: "Arizona's oldest craft distillery. Gold Miner Spirit, tours & tastings.",
-    phone: "(928) 753-3030",
-    tags: ["Distillery", "Tasting", "Tours"],
-    hours: {
-      0: [12,0,17,0],
-      1: null,
-      2: [11,0,18,0],
-      3: [11,0,18,0],
-      4: [11,0,18,0],
-      5: [11,0,19,0],
-      6: [11,0,19,0],
-    },
-    note: "Verify hours before visiting"
-  },
-  {
-    name: "Black Bridge Brewery",
-    category: "drinks",
-    desc: "Kingman's original craft brewery since 2013. Live music most weekends.",
-    phone: "(928) 377-0136",
-    tags: ["Brewery", "Live Music", "Beer"],
-    hours: {
-      0: [12,0,20,0],
-      1: null,
-      2: [14,0,21,0],
-      3: [14,0,21,0],
-      4: [14,0,21,0],
-      5: [12,0,22,0],
-      6: [12,0,22,0],
-    },
-    note: "Extended hours for live music events"
-  },
-  {
-    name: "Kingman Visitor Center",
-    category: "attractions",
-    desc: "Historic Powerhouse building. Route 66 Museum, maps, gift shop.",
-    phone: "(928) 753-6106",
-    tags: ["Museum", "Route 66", "Free Parking"],
-    hours: {
-      0: [9,0,16,0],
-      1: [9,0,16,0],
-      2: [9,0,16,0],
-      3: [9,0,16,0],
-      4: [9,0,16,0],
-      5: [9,0,16,0],
-      6: [9,0,16,0],
-    },
-    note: "Closes 4pm daily"
-  },
-  {
-    name: "Garibaldi's",
-    category: "food",
-    desc: "Italian cuisine in the historic Brunswick Hotel. Chef Luigi's kitchen.",
-    phone: "(928) 718-0018",
-    tags: ["Italian", "Dinner", "Historic"],
-    hours: {
-      0: null,
-      1: null,
-      2: [11,0,21,0],
-      3: [11,0,21,0],
-      4: [11,0,21,0],
-      5: [11,0,22,0],
-      6: [11,0,22,0],
-    }
+// ── GOOGLE SHEET URL ──
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQz1NlsZuZ0iQM0XBrctkDh28qbb4amrHvIGGf3RYR-wQCmM_BScxPf4q4GnBT_ugj9xkFJM3kGFxHB/pub?output=csv';
+
+// Day order in sheet columns: mon=0, tue=1, wed=2, thu=3, fri=4, sat=5, sun=6
+// JS getDay(): 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+const DAY_MAP = { 0:6, 1:0, 2:1, 3:2, 4:3, 5:4, 6:5 };
+const DAY_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];
+
+let businesses = [];
+let currentFilter = 'all';
+
+// Parse "7:00-21:00" into [7,0,21,0] or null if closed
+function parseHours(str) {
+  if (!str || str.trim().toLowerCase() === 'closed' || str.trim() === '') return null;
+  const parts = str.trim().split('-');
+  if (parts.length < 2) return null;
+  const [oh, om] = parts[0].split(':').map(Number);
+  const [ch, cm] = parts[1].split(':').map(Number);
+  return [oh, om||0, ch, cm||0];
+}
+
+// Fetch CSV from Google Sheets and parse into business objects
+async function loadFromSheet() {
+  document.getElementById('cards').innerHTML = `<div class="empty-state"><p>Loading...</p></div>`;
+  try {
+    const res = await fetch(SHEET_URL);
+    const csv = await res.text();
+    const rows = csv.trim().split('\n').map(r => r.split(',').map(c => c.replace(/^"|"$/g,'').trim()));
+    const headers = rows[0].map(h => h.toLowerCase().trim());
+
+    businesses = rows.slice(1).filter(r => r[0]).map(row => {
+      const get = key => row[headers.indexOf(key)] || '';
+      const hours = {};
+      DAY_KEYS.forEach((day, i) => {
+        // Map sheet day index to JS getDay() index
+        const jsDay = [1,2,3,4,5,6,0][i]; // mon=1,tue=2...sun=0
+        hours[jsDay] = parseHours(get(day));
+      });
+      return {
+        name:     get('name'),
+        category: get('category'),
+        desc:     get('desc'),
+        phone:    get('phone'),
+        tags:     get('tags').split(',').map(t => t.trim()).filter(Boolean),
+        note:     get('note'),
+        hours
+      };
+    });
+    render();
+  } catch(e) {
+    document.getElementById('cards').innerHTML = `<div class="empty-state"><div class="big-num">66</div><p>Could not load businesses. Check connection.</p></div>`;
   }
-];
+}
 
 function updateClock() {
   const now = new Date();
@@ -583,8 +501,6 @@ function hoursText(b) {
   return `${fmt(h[0],h[1])} – ${fmt(h[2],h[3])}`;
 }
 
-let currentFilter = 'all';
-
 function render() {
   const container = document.getElementById('cards');
   container.innerHTML = '';
@@ -594,7 +510,6 @@ function render() {
   else if (currentFilter !== 'all') list = businesses.filter(b => b.category === currentFilter);
 
   list = [...list].sort((a,b) => isOpenNow(b) - isOpenNow(a));
-
   document.getElementById('open-count').textContent = businesses.filter(b => isOpenNow(b)).length;
 
   if (!list.length) {
@@ -638,8 +553,9 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 });
 
 updateClock();
-render();
-setInterval(() => { updateClock(); render(); }, 30000);
+loadFromSheet();
+setInterval(() => { updateClock(); }, 30000);
+setInterval(() => { loadFromSheet(); }, 300000); // reload sheet every 5 mins
 </script>
 </body>
 </html>
