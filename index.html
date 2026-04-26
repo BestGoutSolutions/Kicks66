@@ -420,22 +420,24 @@
 // ── GOOGLE SHEET URL ──
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQz1NlsZuZ0iQM0XBrctkDh28qbb4amrHvIGGf3RYR-wQCmM_BScxPf4q4GnBT_ugj9xkFJM3kGFxHB/pub?output=csv';
 
-// Day order in sheet columns: mon=0, tue=1, wed=2, thu=3, fri=4, sat=5, sun=6
+// Sheet columns: mon tue wed thu fri sat sun
 // JS getDay(): 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
-const DAY_MAP = { 0:6, 1:0, 2:1, 3:2, 4:3, 5:4, 6:5 };
+// Map: sheet index -> JS day: mon=1,tue=2,wed=3,thu=4,fri=5,sat=6,sun=0
 const DAY_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];
+const SHEET_TO_JS = [1,2,3,4,5,6,0];
 
 let businesses = [];
 let currentFilter = 'all';
 
-// Parse "7:00-21:00" into [7,0,21,0] or null if closed
+// Parse "7:00-21:00" into [7,0,21,0] or null if closed/empty
 function parseHours(str) {
-  if (!str || str.trim().toLowerCase() === 'closed' || str.trim() === '') return null;
-  const parts = str.trim().split('-');
-  if (parts.length < 2) return null;
-  const [oh, om] = parts[0].split(':').map(Number);
-  const [ch, cm] = parts[1].split(':').map(Number);
-  return [oh, om||0, ch, cm||0];
+  if (!str) return null;
+  const clean = str.replace(/['"]/g,'').trim().toLowerCase();
+  if (clean === '' || clean === 'closed') return null;
+  // Match pattern HH:MM-HH:MM
+  const match = clean.match(/(\d+):(\d+)-(\d+):(\d+)/);
+  if (!match) return null;
+  return [parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4])];
 }
 
 // Fetch CSV from Google Sheets and parse into business objects
@@ -447,17 +449,19 @@ async function loadFromSheet() {
     const rows = csv.trim().split('\n').map(r => r.split(',').map(c => c.replace(/^"|"$/g,'').trim()));
     const headers = rows[0].map(h => h.toLowerCase().trim());
 
-    businesses = rows.slice(1).filter(r => r[0]).map(row => {
-      const get = key => row[headers.indexOf(key)] || '';
+    businesses = rows.slice(1).filter(r => r[0] && r[0].trim() !== '').map(row => {
+      const get = key => {
+        const idx = headers.indexOf(key);
+        return idx >= 0 ? (row[idx] || '').replace(/^"|"$/g,'').trim() : '';
+      };
       const hours = {};
-      DAY_KEYS.forEach((day, i) => {
-        // Map sheet day index to JS getDay() index
-        const jsDay = [1,2,3,4,5,6,0][i]; // mon=1,tue=2...sun=0
+      DAY_KEYS.forEach((day, sheetIdx) => {
+        const jsDay = SHEET_TO_JS[sheetIdx];
         hours[jsDay] = parseHours(get(day));
       });
       return {
         name:     get('name'),
-        category: get('category'),
+        category: get('category').toLowerCase(),
         desc:     get('desc'),
         phone:    get('phone'),
         tags:     get('tags').split(',').map(t => t.trim()).filter(Boolean),
@@ -467,6 +471,7 @@ async function loadFromSheet() {
     });
     render();
   } catch(e) {
+    console.error('Sheet load error:', e);
     document.getElementById('cards').innerHTML = `<div class="empty-state"><div class="big-num">66</div><p>Could not load businesses. Check connection.</p></div>`;
   }
 }
