@@ -446,7 +446,21 @@ async function loadFromSheet() {
   try {
     const res = await fetch(SHEET_URL);
     const csv = await res.text();
-    const rows = csv.trim().split('\n').map(r => r.split(',').map(c => c.replace(/^"|"$/g,'').trim()));
+    // Proper CSV parser that handles quoted commas
+    const parseCSVRow = row => {
+      const result = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let i = 0; i < row.length; i++) {
+        const ch = row[i];
+        if (ch === '"') { inQuotes = !inQuotes; }
+        else if (ch === ',' && !inQuotes) { result.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+      result.push(cur.trim());
+      return result;
+    };
+    const rows = csv.trim().split('\n').map(r => parseCSVRow(r));
     const headers = rows[0].map(h => h.toLowerCase().trim());
 
     businesses = rows.slice(1).filter(r => r[0] && r[0].trim() !== '').map(row => {
@@ -455,9 +469,12 @@ async function loadFromSheet() {
         return idx >= 0 ? (row[idx] || '').replace(/^"|"$/g,'').trim() : '';
       };
       const hours = {};
+      // DAY_KEYS order: mon,tue,wed,thu,fri,sat,sun
+      // SHEET_TO_JS maps each to JS getDay(): mon->1,tue->2,wed->3,thu->4,fri->5,sat->6,sun->0
       DAY_KEYS.forEach((day, sheetIdx) => {
         const jsDay = SHEET_TO_JS[sheetIdx];
-        hours[jsDay] = parseHours(get(day));
+        const val = get(day);
+        hours[jsDay] = parseHours(val);
       });
       return {
         name:     get('name'),
