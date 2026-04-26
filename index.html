@@ -153,6 +153,40 @@
     50%       { opacity: 0.3; }
   }
 
+  /* ── DAY SELECTOR ── */
+  .day-bar {
+    padding: 10px 14px 0;
+    display: flex;
+    gap: 8px;
+    background: var(--black);
+    border-bottom: none;
+  }
+
+  .day-btn {
+    padding: 7px 22px;
+    border-radius: 2px 2px 0 0;
+    border: 1.5px solid var(--olive-dark);
+    border-bottom: none;
+    background: transparent;
+    color: var(--olive-light);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .day-btn:hover {
+    color: var(--yellow);
+    border-color: var(--yellow);
+  }
+
+  .day-btn.active {
+    background: var(--olive-dark);
+    border-color: var(--olive);
+    color: var(--yellow);
+  }
+
   /* ── FILTERS ── */
   .filter-bar {
     padding: 11px 14px;
@@ -402,12 +436,16 @@
   </div>
 </div>
 
+<div class="day-bar">
+  <button class="day-btn active" data-day="0">Today</button>
+  <button class="day-btn" data-day="1">Tomorrow</button>
+</div>
 <div class="filter-bar">
   <button class="filter-btn active" data-filter="all">All</button>
   <button class="filter-btn" data-filter="food">Food</button>
   <button class="filter-btn" data-filter="drinks">Drinks</button>
   <button class="filter-btn" data-filter="attractions">Attractions</button>
-  <button class="filter-btn" data-filter="open">Open Now</button>
+  <button class="filter-btn" data-filter="open">Open</button>
 </div>
 
 <div class="cards-container" id="cards"></div>
@@ -428,6 +466,7 @@ const SHEET_TO_JS = [1,2,3,4,5,6,0];
 
 let businesses = [];
 let currentFilter = 'all';
+let dayOffset = 0; // 0=today, 1=tomorrow
 
 // Parse "7:00-21:00" into [7,0,21,0] or null if closed/empty
 function parseHours(str) {
@@ -504,23 +543,38 @@ function updateClock() {
   document.getElementById('dayname').textContent = days[now.getDay()];
 }
 
+function getViewDay() {
+  const d = new Date();
+  d.setDate(d.getDate() + dayOffset);
+  return d.getDay();
+}
+
 function isOpenNow(b) {
-  const now = new Date();
-  const h = b.hours[now.getDay()];
+  const h = b.hours[getViewDay()];
   if (!h) return false;
-  const cur = now.getHours() * 60 + now.getMinutes();
-  return cur >= (h[0]*60+h[1]) && cur < (h[2]*60+h[3]);
+  // For today check current time, for tomorrow just check if open at all
+  if (dayOffset === 0) {
+    const now = new Date();
+    const cur = now.getHours() * 60 + now.getMinutes();
+    return cur >= (h[0]*60+h[1]) && cur < (h[2]*60+h[3]);
+  }
+  return true; // tomorrow — open that day
 }
 
 function hoursText(b) {
-  const h = b.hours[new Date().getDay()];
-  if (!h) return "Closed today";
+  const h = b.hours[getViewDay()];
+  if (!h) return dayOffset === 0 ? "Closed today" : "Closed tomorrow";
   const fmt = (hh, mm) => {
     const ap = hh >= 12 ? 'pm' : 'am';
     const h12 = hh % 12 || 12;
     return mm ? `${h12}:${mm.toString().padStart(2,'0')}${ap}` : `${h12}${ap}`;
   };
   return `${fmt(h[0],h[1])} – ${fmt(h[2],h[3])}`;
+}
+
+function statusLabel(b) {
+  if (dayOffset === 0) return isOpenNow(b) ? 'Open' : 'Closed';
+  return b.hours[getViewDay()] ? 'Open Tomorrow' : 'Closed Tomorrow';
 }
 
 function render() {
@@ -552,7 +606,7 @@ function render() {
           <div class="card-desc">${b.desc}</div>
         </div>
         <div class="card-right">
-          <span class="status-badge ${open ? 'open' : 'closed'}">${open ? 'Open' : 'Closed'}</span>
+          <span class="status-badge ${open ? 'open' : 'closed'}">${statusLabel(b)}</span>
           <div class="hours-today">${hoursText(b)}</div>
         </div>
       </div>
@@ -564,6 +618,15 @@ function render() {
     container.appendChild(card);
   });
 }
+
+document.querySelectorAll('.day-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    dayOffset = parseInt(btn.dataset.day);
+    render();
+  });
+});
 
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
