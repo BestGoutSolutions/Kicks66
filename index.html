@@ -611,7 +611,10 @@ function render() {
   else if (currentFilter !== 'all') list = businesses.filter(b => b.category === currentFilter);
 
   list = [...list].sort((a,b) => {
-    if (b.featured !== a.featured) return b.featured - a.featured;
+    // Featured always first
+    if (b.featured && !a.featured) return 1;
+    if (a.featured && !b.featured) return -1;
+    // Then open before closed
     return isOpenNow(b) - isOpenNow(a);
   });
   document.getElementById('open-count').textContent = businesses.filter(b => isOpenNow(b)).length;
