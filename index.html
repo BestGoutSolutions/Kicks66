@@ -249,6 +249,17 @@
     border-left: 4px solid var(--open-green);
   }
 
+  .business-card.is-featured {
+    border: 1px solid var(--olive);
+    box-shadow: 0 0 12px rgba(139,138,58,0.2);
+  }
+
+  .business-card.is-featured .card-name::after {
+    content: ' ★';
+    color: var(--yellow);
+    font-size: 0.9rem;
+  }
+
   .business-card.is-closed {
     border-left: 4px solid #ff4433;
     opacity: 0.65;
@@ -535,6 +546,7 @@ async function loadFromSheet() {
         tags:     get('tags').split(',').map(t => t.trim()).filter(Boolean),
         note:     get('note'),
         offer:    get('offer'),
+        featured: get('featured').toLowerCase() === 'yes',
         hours
       };
     });
@@ -598,7 +610,10 @@ function render() {
   if (currentFilter === 'open') list = businesses.filter(b => isOpenNow(b));
   else if (currentFilter !== 'all') list = businesses.filter(b => b.category === currentFilter);
 
-  list = [...list].sort((a,b) => isOpenNow(b) - isOpenNow(a));
+  list = [...list].sort((a,b) => {
+    if (b.featured !== a.featured) return b.featured - a.featured;
+    return isOpenNow(b) - isOpenNow(a);
+  });
   document.getElementById('open-count').textContent = businesses.filter(b => isOpenNow(b)).length;
 
   if (!list.length) {
@@ -609,7 +624,7 @@ function render() {
   list.forEach((b, i) => {
     const open = isOpenNow(b);
     const card = document.createElement('div');
-    card.className = `business-card ${open ? 'is-open' : 'is-closed'}`;
+    card.className = `business-card ${open ? 'is-open' : 'is-closed'} ${b.featured ? 'is-featured' : ''}`;
     card.style.animationDelay = `${i * 0.05}s`;
     card.innerHTML = `
       <div class="card-main">
@@ -623,7 +638,7 @@ function render() {
           <div class="hours-today">${hoursText(b)}</div>
         </div>
       </div>
-      ${b.offer ? `<div class="card-offer">🎟 ${b.offer}</div>` : ''}
+      ${b.featured && b.offer ? `<div class="card-offer">🎟 ${b.offer}</div>` : ''}
       <div class="card-footer">
         ${b.tags.map(t => `<span class="card-tag">${t}</span>`).join('')}
         ${b.note ? `<span class="card-note">⚠ ${b.note}</span>` : ''}
