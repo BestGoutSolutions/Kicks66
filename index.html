@@ -416,6 +416,17 @@
     border-top: 1px solid var(--olive);
   }
 
+  /* ── ADDRESS ── */
+  .card-address {
+    padding: 6px 15px;
+    background: rgba(0,0,0,0.2);
+    border-top: 1px solid var(--border);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    color: var(--cream-dim);
+  }
+
   /* ── FOOTER ── */
   footer {
     text-align: center;
@@ -547,6 +558,7 @@ async function loadFromSheet() {
         note:     get('note'),
         offer:    get('offer'),
         featured: get('featured').toLowerCase() === 'yes',
+        address:  get('address'),
         hours
       };
     });
@@ -646,7 +658,8 @@ function render() {
         ${b.tags.map(t => `<span class="card-tag">${t}</span>`).join('')}
         ${b.note ? `<span class="card-note">⚠ ${b.note}</span>` : ''}
         <a class="card-phone" href="tel:${b.phone}">${b.phone}</a>
-      </div>`;
+      </div>
+      ${b.featured && b.address ? `<div class="card-address">📍 ${b.address}</div>` : ''}`;
     container.appendChild(card);
   });
 }
