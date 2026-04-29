@@ -505,6 +505,9 @@
   <button class="filter-btn" data-filter="open">Open</button>
 </div>
 
+<div id="offline-notice" style="display:none; padding:8px 16px; background:#3a1a0a; border-bottom:1px solid #9a5c22; font-family:'Barlow Condensed',sans-serif; font-size:0.8rem; letter-spacing:1px; color:#c8843c; text-align:center;">
+  ⚠ Showing cached data — no connection detected
+</div>
 <div id="install-banner" style="display:none; align-items:center; justify-content:space-between; padding:10px 16px; background:#1a1a08; border-bottom:1px solid #5c5b26; gap:10px;">
   <span style="font-family:'Barlow Condensed',sans-serif; font-size:0.85rem; color:#f0ead8; letter-spacing:1px;">📲 Add Kicks66 to your home screen</span>
   <div style="display:flex; gap:8px; flex-shrink:0;">
@@ -549,6 +552,8 @@ async function loadFromSheet() {
   try {
     const res = await fetch(SHEET_URL);
     const csv = await res.text();
+    // Cache fresh data
+    try { localStorage.setItem('kicks66_cache', csv); localStorage.setItem('kicks66_cache_time', Date.now()); } catch(e) {}
     // Proper CSV parser that handles quoted commas
     const parseCSVRow = row => {
       const result = [];
@@ -563,6 +568,11 @@ async function loadFromSheet() {
       result.push(cur.trim());
       return result;
     };
+    parseCSV(csv);
+  }
+}
+
+function parseCSV(csv) {
     const rows = csv.trim().split('\n').map(r => parseCSVRow(r));
     const headers = rows[0].map(h => h.toLowerCase().trim());
 
@@ -595,6 +605,15 @@ async function loadFromSheet() {
     render();
   } catch(e) {
     console.error('Sheet load error:', e);
+    // Try cache fallback
+    try {
+      const cached = localStorage.getItem('kicks66_cache');
+      if (cached) {
+        parseCSV(cached);
+        document.getElementById('offline-notice').style.display = 'block';
+        return;
+      }
+    } catch(ce) {}
     document.getElementById('cards').innerHTML = `<div class="empty-state"><div class="big-num">66</div><p>Could not load businesses. Check connection.</p></div>`;
   }
 }
