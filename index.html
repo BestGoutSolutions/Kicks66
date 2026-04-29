@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f0f0f">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Kicks66">
@@ -569,40 +570,6 @@ async function loadFromSheet() {
       return result;
     };
     parseCSV(csv);
-  }
-}
-
-function parseCSV(csv) {
-    const rows = csv.trim().split('\n').map(r => parseCSVRow(r));
-    const headers = rows[0].map(h => h.toLowerCase().trim());
-
-    businesses = rows.slice(1).filter(r => r[0] && r[0].trim() !== '').map(row => {
-      const get = key => {
-        const idx = headers.indexOf(key);
-        return idx >= 0 ? (row[idx] || '').replace(/^"|"$/g,'').trim() : '';
-      };
-      const hours = {};
-      // DAY_KEYS order: mon,tue,wed,thu,fri,sat,sun
-      // SHEET_TO_JS maps each to JS getDay(): mon->1,tue->2,wed->3,thu->4,fri->5,sat->6,sun->0
-      DAY_KEYS.forEach((day, sheetIdx) => {
-        const jsDay = SHEET_TO_JS[sheetIdx];
-        const val = get(day);
-        hours[jsDay] = parseHours(val);
-      });
-      return {
-        name:     get('name'),
-        category: get('category').toLowerCase(),
-        desc:     get('desc'),
-        phone:    get('phone'),
-        tags:     get('tags').split(',').map(t => t.trim()).filter(Boolean),
-        note:     get('note'),
-        offer:    get('offer'),
-        featured: get('featured').toLowerCase() === 'yes',
-        address:  get('address'),
-        hours
-      };
-    });
-    render();
   } catch(e) {
     console.error('Sheet load error:', e);
     // Try cache fallback
@@ -616,6 +583,50 @@ function parseCSV(csv) {
     } catch(ce) {}
     document.getElementById('cards').innerHTML = `<div class="empty-state"><div class="big-num">66</div><p>Could not load businesses. Check connection.</p></div>`;
   }
+}
+
+function parseCSV(csv) {
+  const parseCSVRow = row => {
+    const result = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < row.length; i++) {
+      const ch = row[i];
+      if (ch === '"') { inQuotes = !inQuotes; }
+      else if (ch === ',' && !inQuotes) { result.push(cur.trim()); cur = ''; }
+      else { cur += ch; }
+    }
+    result.push(cur.trim());
+    return result;
+  };
+
+  const rows = csv.trim().split('\n').map(r => parseCSVRow(r));
+  const headers = rows[0].map(h => h.toLowerCase().trim());
+
+  businesses = rows.slice(1).filter(r => r[0] && r[0].trim() !== '').map(row => {
+    const get = key => {
+      const idx = headers.indexOf(key);
+      return idx >= 0 ? (row[idx] || '').replace(/^"|"$/g,'').trim() : '';
+    };
+    const hours = {};
+    DAY_KEYS.forEach((day, sheetIdx) => {
+      const jsDay = SHEET_TO_JS[sheetIdx];
+      hours[jsDay] = parseHours(get(day));
+    });
+    return {
+      name:     get('name'),
+      category: get('category').toLowerCase(),
+      desc:     get('desc'),
+      phone:    get('phone'),
+      tags:     get('tags').split(',').map(t => t.trim()).filter(Boolean),
+      note:     get('note'),
+      offer:    get('offer'),
+      featured: get('featured').toLowerCase() === 'yes',
+      address:  get('address'),
+      hours
+    };
+  });
+  render();
 }
 
 function updateClock() {
