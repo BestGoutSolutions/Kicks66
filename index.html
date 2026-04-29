@@ -682,13 +682,13 @@ function render() {
         <div class="card-right">
           <span class="status-badge ${open ? 'open' : 'closed'}">${statusLabel(b)}</span>
           <div class="hours-today">${hoursText(b)}</div>
+          <a class="card-phone" href="tel:${b.phone}">${b.phone}</a>
         </div>
       </div>
       ${b.featured && b.offer ? `<div class="card-offer">🎟 ${b.offer}</div>` : ''}
       <div class="card-footer">
         ${b.tags.map(t => `<span class="card-tag">${t}</span>`).join('')}
         ${b.note ? `<span class="card-note">⚠ ${b.note}</span>` : ''}
-        <a class="card-phone" href="tel:${b.phone}">${b.phone}</a>
       </div>
 `;
     container.appendChild(card);
