@@ -730,7 +730,7 @@ function renderEvents() {
         </div>
         <div class="card-right">
           <span class="status-badge open">${e.time}</span>
-          <div class="hours-today">${e.location}</div>
+          <a class="card-address-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank">${e.location}</a>
         </div>
       </div>
       ${e.url ? `<div class="card-footer"><a href="${e.url}" target="_blank" style="color:var(--olive-light);font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:1px;">More info →</a></div>` : ''}
