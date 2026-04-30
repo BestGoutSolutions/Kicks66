@@ -451,6 +451,17 @@
     color: var(--yellow);
   }
 
+  /* ── EVENT DATE HEADER ── */
+  .event-date-header {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    color: var(--yellow);
+    padding: 10px 4px 4px;
+    border-bottom: 1px solid var(--olive-dark);
+    margin-bottom: 4px;
+  }
+
   /* ── FOOTER ── */
   footer {
     text-align: center;
@@ -497,8 +508,9 @@
 <div class="day-bar">
   <button class="day-btn active" data-day="0">Today</button>
   <button class="day-btn" data-day="1">Tomorrow</button>
+  <button class="day-btn" data-day="events" id="events-tab">Events</button>
 </div>
-<div class="filter-bar">
+<div class="filter-bar" id="business-filters">
   <button class="filter-btn active" data-filter="all">All</button>
   <button class="filter-btn" data-filter="food">Food</button>
   <button class="filter-btn" data-filter="drinks">Drinks</button>
@@ -525,6 +537,7 @@
 <script>
 // ── GOOGLE SHEET URL ──
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQz1NlsZuZ0iQM0XBrctkDh28qbb4amrHvIGGf3RYR-wQCmM_BScxPf4q4GnBT_ugj9xkFJM3kGFxHB/pub?output=csv';
+const EVENTS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQz1NlsZuZ0iQM0XBrctkDh28qbb4amrHvIGGf3RYR-wQCmM_BScxPf4q4GnBT_ugj9xkFJM3kGFxHB/pub?gid=175459323&single=true&output=csv';
 
 // Sheet columns: mon tue wed thu fri sat sun
 // JS getDay(): 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
@@ -533,8 +546,10 @@ const DAY_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];
 const SHEET_TO_JS = [1,2,3,4,5,6,0];
 
 let businesses = [];
+let events = [];
 let currentFilter = 'all';
 let dayOffset = 0; // 0=today, 1=tomorrow
+let currentView = 'businesses'; // 'businesses' or 'events'
 
 // Parse "7:00-21:00" into [7,0,21,0] or null if closed/empty
 function parseHours(str) {
@@ -627,6 +642,101 @@ function parseCSV(csv) {
     };
   });
   render();
+}
+
+async function loadEvents() {
+  try {
+    const res = await fetch(EVENTS_URL);
+    const csv = await res.text();
+    const parseCSVRow = row => {
+      const result = [];
+      let cur = '', inQuotes = false;
+      for (let i = 0; i < row.length; i++) {
+        const ch = row[i];
+        if (ch === '"') { inQuotes = !inQuotes; }
+        else if (ch === ',' && !inQuotes) { result.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+      result.push(cur.trim());
+      return result;
+    };
+    const rows = csv.trim().split('\n').map(r => parseCSVRow(r));
+    const headers = rows[0].map(h => h.toLowerCase().trim());
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    events = rows.slice(1).filter(r => r[0] && r[0].trim() !== '').map(row => {
+      const get = key => {
+        const idx = headers.indexOf(key);
+        return idx >= 0 ? (row[idx] || '').replace(/^"|"$/g,'').trim() : '';
+      };
+      return {
+        title:    get('title'),
+        date:     get('date'),
+        time:     get('time'),
+        location: get('location'),
+        desc:     get('desc'),
+        url:      get('url')
+      };
+    }).filter(e => {
+      // Only show today and future events
+      const eventDate = new Date(e.date + 'T00:00:00');
+      return eventDate >= today;
+    }).sort((a,b) => new Date(a.date) - new Date(b.date));
+    try { localStorage.setItem('kicks66_events_cache', JSON.stringify(events)); } catch(e) {}
+  } catch(err) {
+    try {
+      const cached = localStorage.getItem('kicks66_events_cache');
+      if (cached) events = JSON.parse(cached);
+    } catch(ce) {}
+  }
+}
+
+function renderEvents() {
+  const container = document.getElementById('cards');
+  container.innerHTML = '';
+
+  if (!events.length) {
+    container.innerHTML = `<div class="empty-state"><div class="big-num">66</div><p>No upcoming events found</p></div>`;
+    return;
+  }
+
+  let lastDate = '';
+  events.forEach((e, i) => {
+    // Date header
+    const eventDate = new Date(e.date + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
+    let dateLabel = eventDate.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+    if (eventDate.getTime() === today.getTime()) dateLabel = 'Today — ' + dateLabel;
+    else if (eventDate.getTime() === tomorrow.getTime()) dateLabel = 'Tomorrow — ' + dateLabel;
+
+    if (dateLabel !== lastDate) {
+      const header = document.createElement('div');
+      header.className = 'event-date-header';
+      header.textContent = dateLabel;
+      container.appendChild(header);
+      lastDate = dateLabel;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'business-card is-open';
+    card.style.animationDelay = `${i * 0.05}s`;
+    card.innerHTML = `
+      <div class="card-main">
+        <div class="card-left">
+          <div class="card-category">event</div>
+          <div class="card-name">${e.title}</div>
+          <div class="card-desc">${e.desc}</div>
+        </div>
+        <div class="card-right">
+          <span class="status-badge open">${e.time}</span>
+          <div class="hours-today">${e.location}</div>
+        </div>
+      </div>
+      ${e.url ? `<div class="card-footer"><a href="${e.url}" target="_blank" style="color:var(--olive-light);font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:1px;">More info →</a></div>` : ''}
+    `;
+    container.appendChild(card);
+  });
 }
 
 function updateClock() {
@@ -729,8 +839,18 @@ document.querySelectorAll('.day-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    dayOffset = parseInt(btn.dataset.day);
-    render();
+    if (btn.dataset.day === 'events') {
+      currentView = 'events';
+      document.getElementById('business-filters').style.display = 'none';
+      document.getElementById('open-count').parentElement.parentElement.style.display = 'none';
+      renderEvents();
+    } else {
+      currentView = 'businesses';
+      dayOffset = parseInt(btn.dataset.day);
+      document.getElementById('business-filters').style.display = 'flex';
+      document.getElementById('open-count').parentElement.parentElement.style.display = 'flex';
+      render();
+    }
   });
 });
 
@@ -745,6 +865,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 
 updateClock();
 loadFromSheet();
+loadEvents();
 setInterval(() => { updateClock(); }, 30000);
 setInterval(() => { loadFromSheet(); }, 300000);
 
