@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-WPV3R7XGNB"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-WPV3R7XGNB');
+</script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f0f0f">
 <meta name="mobile-web-app-capable" content="yes">
@@ -428,12 +436,54 @@
   .card-offer {
     padding: 8px 15px;
     background: linear-gradient(90deg, var(--olive-dark) 0%, var(--copper) 50%, var(--olive-dark) 100%);
+    border-top: 1px solid var(--olive);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .offer-text {
     color: var(--cream);
     font-family: 'Bebas Neue', sans-serif;
     font-size: 1rem;
     letter-spacing: 2px;
     text-align: center;
-    border-top: 1px solid var(--olive);
+  }
+
+  .claim-btn {
+    background: var(--yellow);
+    border: none;
+    border-radius: 2px;
+    padding: 5px 16px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--black);
+    cursor: pointer;
+  }
+
+  .offer-reveal {
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .offer-code {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: 6px;
+    color: var(--yellow);
+  }
+
+  .offer-instruction {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    color: var(--cream);
+    text-align: center;
   }
 
   /* ── ADDRESS ── */
@@ -730,13 +780,20 @@ function renderEvents() {
         </div>
         <div class="card-right">
           <span class="status-badge open">${e.time}</span>
-          <a class="card-address-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank">${e.location}</a>
+          <a class="card-address-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="track('event_address_tap', {event_name: '${e.title}'})">${e.location}</a>
         </div>
       </div>
       ${e.url ? `<div class="card-footer"><a href="${e.url}" target="_blank" style="color:var(--olive-light);font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:1px;">More info →</a></div>` : ''}
     `;
     container.appendChild(card);
   });
+}
+
+// ── TRACKING ──
+function track(eventName, params) {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', eventName, params);
+  }
 }
 
 function updateClock() {
@@ -784,6 +841,13 @@ function statusLabel(b) {
   return b.hours[getViewDay()] ? 'Open Tomorrow' : 'Closed Tomorrow';
 }
 
+function revealOffer(btn, businessName) {
+  const offerDiv = btn.closest('.card-offer');
+  btn.style.display = 'none';
+  offerDiv.querySelector('.offer-reveal').style.display = 'flex';
+  track('offer_claimed', {business: businessName});
+}
+
 function render() {
   const container = document.getElementById('cards');
   container.innerHTML = '';
@@ -822,10 +886,18 @@ function render() {
         <div class="card-right">
           <span class="status-badge ${open ? 'open' : 'closed'}">${statusLabel(b)}</span>
           <div class="hours-today">${hoursText(b)}</div>
-          <a class="card-phone" href="tel:${b.phone}">${b.phone}</a>
+          <a class="card-phone" href="tel:${b.phone}" onclick="track('phone_tap', {business: '${b.name}'})">${b.phone}</a>
         </div>
       </div>
-      ${b.featured && b.offer ? `<div class="card-offer">🎟 ${b.offer}</div>` : ''}
+      ${b.featured && b.offer ? `
+        <div class="card-offer">
+          <span class="offer-text">🎟 ${b.offer}</span>
+          <button class="claim-btn" onclick="revealOffer(this, '${b.name}')">Tap to Reveal Discount</button>
+          <div class="offer-reveal" style="display:none">
+            <span class="offer-code">KICKS66</span>
+            <span class="offer-instruction">Show this screen to redeem your offer</span>
+          </div>
+        </div>` : ''}
       <div class="card-footer">
         ${b.tags.map(t => `<span class="card-tag">${t}</span>`).join('')}
         ${b.note ? `<span class="card-note">⚠ ${b.note}</span>` : ''}
@@ -841,6 +913,7 @@ document.querySelectorAll('.day-btn').forEach(btn => {
     btn.classList.add('active');
     if (btn.dataset.day === 'events') {
       currentView = 'events';
+      track('events_tab_open', {});
       document.getElementById('business-filters').style.display = 'none';
       document.getElementById('open-count').parentElement.parentElement.style.display = 'none';
       renderEvents();
@@ -859,6 +932,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentFilter = btn.dataset.filter;
+    track('filter_tap', {filter: btn.dataset.filter});
     render();
   });
 });
