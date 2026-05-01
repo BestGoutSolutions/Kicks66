@@ -278,13 +278,14 @@
   }
 
   .card-shield {
-    width: 18px;
-    height: 21px;
+    width: 22px;
+    height: 22px;
     vertical-align: middle;
     margin-left: 6px;
     display: inline-block;
     position: relative;
     top: -2px;
+    mix-blend-mode: screen;
   }
 
   .business-card.is-closed {
@@ -780,7 +781,7 @@ function renderEvents() {
         </div>
         <div class="card-right">
           <span class="status-badge open">${e.time}</span>
-          <a class="card-address-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="track('event_address_tap', {event_name: '${e.title}'})">${e.location}</a>
+          <a class="card-address-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" onclick="track('event_address_tap', {event_name: '${e.title}'})">📍 Get Directions</a>
         </div>
       </div>
       ${e.url ? `<div class="card-footer"><a href="${e.url}" target="_blank" style="color:var(--olive-light);font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:1px;">More info →</a></div>` : ''}
@@ -882,12 +883,7 @@ function render() {
       <div class="card-main">
         <div class="card-left">
           <div class="card-category">${b.category}</div>
-          <div class="card-name">${b.name}${b.featured ? `<svg class="card-shield" viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
-      <path d="M3 20 Q20 20 28 8 Q38 -2 50 6 Q62 -2 72 8 Q80 20 97 20 Q92 32 90 42 Q87 54 90 62 Q88 84 50 112 Q12 84 10 62 Q13 54 10 42 Q8 32 3 20 Z" fill="#cc2200" stroke="white" stroke-width="3"/>
-      <path d="M10 22 Q24 22 31 12 Q40 3 50 10 Q60 3 69 12 Q76 22 90 22 Q86 32 84 41 Q81 52 84 60 Q82 80 50 106 Q18 80 16 60 Q19 52 16 41 Q14 32 10 22 Z" fill="#1a3fcc"/>
-      <text x="50" y="52" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="18" fill="white" letter-spacing="1">KICKS</text>
-      <text x="50" y="88" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="36" fill="white">66</text>
-    </svg>` : ''}</div>
+          <div class="card-name">${b.name}${b.featured ? `<img src="data:image/png;base64,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" class="card-shield" alt="Kicks66">` : ''}</div>
           ${b.featured && b.address ? `<a class="card-address-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank">📍 ${b.address}</a>` : ''}
           <div class="card-desc">${b.desc}</div>
         </div>
