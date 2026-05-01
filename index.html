@@ -279,14 +279,12 @@
 
   .card-shield {
     width: 18px;
-    height: 20px;
-    object-fit: contain;
+    height: 21px;
     vertical-align: middle;
     margin-left: 6px;
     display: inline-block;
     position: relative;
     top: -2px;
-    mix-blend-mode: screen;
   }
 
   .business-card.is-closed {
@@ -884,7 +882,12 @@ function render() {
       <div class="card-main">
         <div class="card-left">
           <div class="card-category">${b.category}</div>
-          <div class="card-name">${b.name}${b.featured ? '<img src="data:image/png;base64,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" class="card-shield" alt="Route 66">' : ''}</div>
+          <div class="card-name">${b.name}${b.featured ? `<svg class="card-shield" viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 20 Q20 20 28 8 Q38 -2 50 6 Q62 -2 72 8 Q80 20 97 20 Q92 32 90 42 Q87 54 90 62 Q88 84 50 112 Q12 84 10 62 Q13 54 10 42 Q8 32 3 20 Z" fill="#cc2200" stroke="white" stroke-width="3"/>
+      <path d="M10 22 Q24 22 31 12 Q40 3 50 10 Q60 3 69 12 Q76 22 90 22 Q86 32 84 41 Q81 52 84 60 Q82 80 50 106 Q18 80 16 60 Q19 52 16 41 Q14 32 10 22 Z" fill="#1a3fcc"/>
+      <text x="50" y="52" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="18" fill="white" letter-spacing="1">KICKS</text>
+      <text x="50" y="88" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="36" fill="white">66</text>
+    </svg>` : ''}</div>
           ${b.featured && b.address ? `<a class="card-address-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank">📍 ${b.address}</a>` : ''}
           <div class="card-desc">${b.desc}</div>
         </div>
