@@ -792,7 +792,10 @@ function renderEvents() {
 }
 
 // ── TRACKING ──
+const DEV_MODE = new URLSearchParams(window.location.search).get('dev') === 'true';
+
 function track(eventName, params) {
+  if (DEV_MODE) return;
   if (typeof gtag !== 'undefined') {
     gtag('event', eventName, params);
   }
